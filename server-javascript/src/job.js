@@ -10,7 +10,7 @@ export class Job {
 
     /**
      * Creates a new job from a G-code script
-     * @param {string} name The name of the job
+     * @param {string} name Identifier used to differentiate between jobs
      * @param {string[]} gcodeScript Each command from the G-code script @todo Might update this property
      */
     constructor(name, gcodeScript) {
