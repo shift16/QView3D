@@ -7,6 +7,7 @@ import * as fs from 'node:fs';
 import { SerialPort } from 'serialport';
 import { Job } from './job.js';
 import { log } from './log.js';
+import { EventEmitter } from 'node:events';
 
 // Character encoding used in Marlin compatible 3D printers
 const PROTOCOL_CHARACTER_ENCODING = 'utf-8';
@@ -29,6 +30,7 @@ export class Printer {
     #serialOutputBuffer;
     #currentJob;
     #serialPort;
+    #callbackRegistrar;
 
     /**
      * Creates a new printer object
@@ -38,6 +40,7 @@ export class Printer {
         this.#serialOutputBuffer = '';
         this.#serialPort = undefined;
         this.#currentJob = undefined;
+        this.#callbackRegistrar = new EventEmitter();
     }
 
     /**
