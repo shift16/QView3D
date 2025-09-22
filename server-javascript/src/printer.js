@@ -29,8 +29,6 @@ export class Printer {
         
     }
 
-    #serialPort;
-
     #portListener(byteChunk) {
         throw new Error('Function not implemented');
     }
