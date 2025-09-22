@@ -55,7 +55,7 @@ export class Printer {
 
         // Only strings with new lines should be processed
         const outputLines = this.#serialOutputBuffer.split('\n');
-        // The last line doesn't have a new line
+        // The last line doesn't have a new line (hence the outputLines.length - 1)
         for (let i = 0; i < outputLines.length - 1; i++) {
             const currentLine = outputLines[i];
             //## Handle progress update
