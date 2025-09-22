@@ -28,6 +28,7 @@
     "serialport": "^13.0.0"
   },
   "devDependencies": {
-    "jsdoc": "^4.0.4"
+    "jsdoc": "^4.0.4",
+    "@types/node": "^24.3.2"
   }
 }
