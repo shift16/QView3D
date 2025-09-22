@@ -40,10 +40,3 @@ export const SHOW_TIMED_OUT_INSTRUCTIONS = true;
 export const SHOW_EXTRACTOR_STATE_AFTER_TIMEOUT = false;
 
 export const FABRICATOR_CONNECTION_OPENED = true;
-
-// Debug flags for
-// ../serial_communication/marlin_firmware/helpers.js
-export const SHOW_PICKED_DRIVER = true;
-
-// Used to show when many timeouts occurred when trying to communicate with a printer
-export const MANY_TIMEOUTS_OCCURRED = true;
