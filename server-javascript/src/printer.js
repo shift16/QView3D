@@ -1,7 +1,4 @@
 'use strict';
-// The class/driver architecture is unnecessary because the behavior of every
-// 3D printer flashed with Marlin's firmware should behave similarly
-// The callback model seems better
 
 import * as fs from 'node:fs';
 import { SerialPort } from 'serialport';
@@ -62,6 +59,7 @@ export class Printer {
         for (let i = 0; i < outputLines.length - 1; i++) {
             const currentLine = outputLines[i];
             //## Handle progress update
+            /** @todo */
             
             //## When we receive an OK
             if (currentLine.startsWith('ok') && currentLine.length === 2) {
@@ -99,6 +97,7 @@ export class Printer {
             }
     
             //## Handle temperature change
+            /** @todo */
         }
     }
     
