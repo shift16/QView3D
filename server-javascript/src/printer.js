@@ -85,7 +85,7 @@ export class Printer {
                                 log(
                                     `The 3D printer at port "${this.#serialPort?.path}" had the content "${this.#serialOutputBuffer}" in its buffer`,
                                     'printer.js',
-                                    'NON_EMPTY_OUTPUT_BUFFER'
+                                    'NON_EMPTY_OUTPUT_BUFFER_ON_JOB_COMPLETE'
                                 )
                             }
                             // Clear the buffer

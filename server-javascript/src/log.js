@@ -1,7 +1,10 @@
 // Simple log function with some flags
 
 const DEBUG_FLAGS = {
-    'GENERIC': true, // This flag is used to log events that don't fit in any categories 
+    // Logs events that don't fit in any categories
+    'GENERIC': true,
+    // Logs events where the output buffer still has content after a job has completed
+    'NON_EMPTY_OUTPUT_BUFFER_ON_JOB_COMPLETE': true,
 };
 
 /**
