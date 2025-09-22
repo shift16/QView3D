@@ -86,14 +86,12 @@ export class Printer {
                                     `The 3D printer at port "${this.#serialPort?.path}" had the content "${this.#serialOutputBuffer}" in its buffer`,
                                     'printer.js',
                                     'NON_EMPTY_OUTPUT_BUFFER_ON_JOB_COMPLETE'
-                                )
+                                );
                             }
                             // Clear the buffer
                             this.#serialOutputBuffer = '';
                         }
-
                     }
-                    
                 }
             }
     
@@ -123,8 +121,12 @@ export class Printer {
         });
     }
     
-    sendGCodeScript(gCodeScript) {
-        throw new Error('Function not implemented');
+    startJob(job) {
+        if (!(job instanceof Job))
+            throw new TypeError(`When starting a job, you need to use a job object "${typeof job}"`);
+
+
+        
     }
 
     onTempChange(callback) {
