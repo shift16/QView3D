@@ -3,10 +3,9 @@
  * Class used to hold G-code to be sent to a 3D printer
  */
 export class Job {
-    // Private properties
     #gcodeScriptIndex;
     #gcodeScript;
-    #name;
+    name;
 
     /**
      * Creates a new job from a G-code script
@@ -19,7 +18,7 @@ export class Job {
 
         this.#gcodeScript = gcodeScript;
         this.#gcodeScriptIndex = 0;
-        this.#name = name;
+        this.name = name;
     }
     /**
      * Returns the next G-code command from the G-code script
@@ -30,7 +29,7 @@ export class Job {
         const nextCommand = this.#gcodeScript[this.#gcodeScriptIndex];
 
         if (nextCommand === undefined)
-            throw new Error(`The job "${this.#name}" has no more G-code commands to send`);
+            throw new Error(`The job "${this.name}" has no more G-code commands to send`);
 
         this.#gcodeScriptIndex++;
         return nextCommand;
@@ -38,6 +37,7 @@ export class Job {
 
     /** 
      * Returns true if the current job is complete, false otherwise
+     * @returns {boolean}
      */
     notComplete() {
         return this.#gcodeScript[this.#gcodeScriptIndex] !== undefined;
@@ -45,6 +45,7 @@ export class Job {
 
     /**
      * Restarts the current job
+     * @returns {void}
      */
     restart() {
         this.#gcodeScriptIndex = 0;
