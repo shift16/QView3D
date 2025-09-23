@@ -12,7 +12,7 @@ const MARLIN_PROTOCOL_ENCODING = 'utf-8';
 // Used to differentiate between ambiguous errors and errors thrown by printer operations
 export class PrinterError extends Error {};
 
-export const PrinterStatus = {
+export const PrinterState = {
     NOT_CONNECTED: 0,
     READY: 1,
     PRINTING: 2,
@@ -26,17 +26,19 @@ export const PrinterStatus = {
  */
 export class Printer {
     #state;
+    // Used to hold incomplete responses from the printer
     #dataBuffer;
     #currentJob;
     #serialPort;
-    #eventHandler;
+    // Used to call any callback functions that are listening for events from this printer
+    #eventEmitter;
 
     constructor() {
-        this.#state = PrinterStatus.NOT_CONNECTED;
+        this.#state = PrinterState.NOT_CONNECTED;
         this.#dataBuffer = '';
         this.#serialPort = undefined;
         this.#currentJob = undefined;
-        this.#eventHandler = new EventEmitter();
+        this.#eventEmitter = new EventEmitter();
     }
 
     /** 
@@ -44,18 +46,23 @@ export class Printer {
      * Assumes to be a callback function to the {@link https://nodejs.org/docs/latest-v18.x/api/stream.html#event-data 'data'} event
      */
     #portListener(dataFromPort) {
-        // Interpret the raw binary coming from the port as UTF-8 (whatever MARLIN_PROTOCOL_ENCODING is) encoded strings
+        // Interpret the raw binary coming from the port as UTF-8 (or whatever MARLIN_PROTOCOL_ENCODING is) encoded strings
         if (dataFromPort instanceof Buffer)
             dataFromPort.toString(MARLIN_PROTOCOL_ENCODING);
-
+        
+        // The response from the printer may not be complete so we must store the current response in a buffer
+        // When we receive more data, we'll stitch the content together to create a complete response
         if (typeof dataFromPort === 'string')
             this.#dataBuffer += dataFromPort;
         else
-            throw new Error(`Stream at port "${this.#serialPort?.path}" is in object mode which is not supported`);
+            throw new error(`stream at port "${this.#serialPort?.path}" is in object mode which is not supported`);
 
-        // Only strings with new lines should be processed
+        // Each complete response from the printer must be processed by the server
+        // a complete response is UTF-8 (or whatever MARLIN_PROTOCOL_ENCODING is) encoded strings ending with a newline 
+        // sometimes the printer will send multiple complete responses at once so we split each response by the newline
         const outputLines = this.#dataBuffer.split('\n');
-        // The last line doesn't have a new line (hence the outputLines.length - 1)
+        
+        // But, the last line doesn't end with a newline so we won't process it (outputLines.length - 1)
         for (let i = 0; i < outputLines.length - 1; i++) {
             const currentLine = outputLines[i];
             //## Handle progress update
@@ -64,7 +71,7 @@ export class Printer {
             //## When we receive an OK
             if (currentLine.startsWith('ok') && currentLine.length === 2) {
                 // Send the next G-Code command if the printer is PRINTING or READY
-                if (this.#state === Printer.READY || this.#state === Printer.PRINTING) {
+                if (this.#state === PrinterState.READY || this.#state === PrinterState.PRINTING) {
                     const cJob = this.#currentJob;
 
                     if (cJob instanceof Job) {
@@ -80,7 +87,12 @@ export class Printer {
                             }
                         } else {
                             // No more G-code to send
-                            this.#state = Printer.READY;
+                            log(
+                                `Printer at port "${this.#serialPort?.path}" finished printing`,
+                                'printer.js',
+                                'PRINTER_JOB_COMPLETED'
+                            );
+                            this.#state = PrinterState.READY;
 
                             if (this.#dataBuffer.length !== 0) {
                                 log(
@@ -110,17 +122,17 @@ export class Printer {
      */
     setSerialPort(path, baudRate) {
         if (this.#serialPort instanceof SerialPort) {
-            if (this.#state === Printer.PRINTING || this.#state === Printer.PAUSED)
+            if (this.#state === PrinterState.PRINTING || this.#state === PrinterState.PAUSED)
                 throw new PrinterError(`Cannot set serial port because the printer at port "${this.#serialPort.path}" is currently printing`);
 
             this.#serialPort.close();
         }
         
-        this.#state = Printer.CONNECTING;
+        this.#state = PrinterState.CONNECTING;
 
         this.#serialPort = new SerialPort({ path: path, baudRate: baudRate}, _ => {
             /** I believe this function is called when the SerialPort class has connected to the serial port @todo Double check */
-            this.#state = Printer.READY;
+            this.#state = PrinterState.READY;
             
             
         });
@@ -136,17 +148,17 @@ export class Printer {
         if (!(job instanceof Job))
             throw new TypeError(`When starting a job, you need to use a job object and not a "${typeof job}"`);
 
-        if (this.#state === Printer.READY) {
+        if (this.#state === PrinterState.READY) {
             this.#currentJob = job;
             
 
             log(
                 `Job ${job.name} has started at printer "${this.#serialPort.path}"`, 
-                "printer.js", 
-                "PRINTER_JOB_STARTED"
+                'printer.js', 
+                'PRINTER_JOB_STARTED'
             );
         } else {
-            throw new PrinterError(`Printer at port "${this.#serialPort?.path} is not done printing the current job. Therefore, it won't start another job"`);
+            throw new PrinterError(`Printer at port "${this.#serialPort?.path}" is not done printing the current job. Therefore, it won't start another job`);
         }
     }
 

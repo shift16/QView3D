@@ -9,6 +9,8 @@ const DEBUG_FLAGS = {
     'NON_EMPTY_OUTPUT_BUFFER_ON_JOB_COMPLETE': true,
     // Logs when a job is started
     'PRINTER_JOB_STARTED': true,
+    // Logs when a job is completed
+    'PRINTER_JOB_COMPLETED': true,
 };
 
 // Ansi Codes used to add rich text effects to your terminal
