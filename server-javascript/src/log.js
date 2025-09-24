@@ -18,9 +18,8 @@ const DEBUG_FLAGS = {
 const bold = '\x1b[1m';
 const italic = '\x1b[3m';
 const endEffect = '\x1b[0m';
-/**
- * Function used to log messages. Adds rich text effects to the terminal
- */
+
+/** Function used to log messages. Adds rich text effects to the terminal */
 export function log(msg, filename, debugFlag = 'GENERIC') {
     // All flags should be upper case
     debugFlag = debugFlag.toUpperCase();
