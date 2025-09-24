@@ -21,6 +21,8 @@ export const PrinterState = {
     ERROR: 5
 };
 
+const validBaudRates = [115200, 250000, 230400, 57600, 38400, 19200, 9600];
+
 /**
  * Class used to communicate with {@link https://github.com/MarlinFirmware/Marlin Marlin firmware} compatible 3D printers
  */
@@ -40,7 +42,16 @@ export class Printer {
         this.#currentJob = undefined;
         this.#eventEmitter = new EventEmitter();
     }
-
+    
+    #sendGcodeCommand(gcodeCommand) {
+        /** @todo Figure out the errors that can occur. Maybe use .isOpen to determine if the port is still open? */
+        try {
+            this.#serialPort.write(gcodeCommand, MARLIN_PROTOCOL_ENCODING);
+        } catch (err) {
+            throw new PrinterError(`Failed to send a command to the 3D printer at port "${this.#serialPort.path}"`, { cause: err });
+        }
+    }
+    
     /** 
      * Function used to listen and process data coming from a connected 3D printer
      * Assumes to be a callback function to the {@link https://nodejs.org/docs/latest-v18.x/api/stream.html#event-data 'data'} event
@@ -78,13 +89,7 @@ export class Printer {
                         if (cJob.notComplete()) {
                             // More G-code to send
                             const nextCommand = cJob.nextGCodeCommand();
-
-                            /** @todo Figure out the errors that can occur. Maybe use .isOpen to determine if the port is still open? */
-                            try {
-                                this.#serialPort.write(nextCommand, MARLIN_PROTOCOL_ENCODING);
-                            } catch (err) {
-                                throw new PrinterError(`Failed to send a command to the 3D printer at port "${this.#serialPort.path}"`, { cause: err });
-                            }
+                            this.#sendGcodeCommand(nextCommand);
                         } else {
                             // No more G-code to send
                             log(
@@ -113,14 +118,18 @@ export class Printer {
         }
     }
     
+    #closeListener(err) {
+        throw new Error('Function not implemented');
+    }
+    
     /**
-     * Sets the serial port to communicate with
-     * If the printer is printing, this will error
-     * @param {string} path The path to the serial port (e.g. /dev/ttyACM0 on Linux or COM1 on Windows)
-     * @param {number} baudRate The baud rate of the serial port
-     * @returns {void}
+     * Sets the serial port to communicate with and baudRate to use. Baud rate defaults to 115200b/s
+     * If the printer is printing or paused, this will throw a `PrinterError`
      */
-    setSerialPort(path, baudRate) {
+    setSerialPort(serialPortLocation, baudRate = 115200) {
+        if (!(baudRate in validBaudRates))
+            throw new Error(`${baudRate} is not a valid or supported baud rate`);
+            
         if (this.#serialPort instanceof SerialPort) {
             if (this.#state === PrinterState.PRINTING || this.#state === PrinterState.PAUSED)
                 throw new PrinterError(`Cannot set serial port because the printer at port "${this.#serialPort.path}" is currently printing`);
@@ -130,19 +139,19 @@ export class Printer {
         
         this.#state = PrinterState.CONNECTING;
 
-        this.#serialPort = new SerialPort({ path: path, baudRate: baudRate}, _ => {
+        this.#serialPort = new SerialPort({ path: serialPortLocation, baudRate: baudRate}, _ => {
             /** I believe this function is called when the SerialPort class has connected to the serial port @todo Double check */
             this.#state = PrinterState.READY;
-            
-            
         });
+        
+        this.#serialPort
+            .on('data', this.#portListener)
+            .on('close', this.#closeListener);
     }
     
     /**
      * Tells the printer to start the passed job
      * If the printer is printing or paused, this will throw a `PrinterError`
-     * @param {Job} job The job to start
-     * @returns {void}
      */
     startJob(job) {
         if (!(job instanceof Job))
