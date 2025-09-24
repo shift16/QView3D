@@ -1,7 +1,8 @@
+'use strict';
+
 // Simple log function with some flags
 
-// A list of debug flags (All flags follow screaming snake case https://en.wikipedia.org/wiki/Snake_case)
-/** @type {Object.<string, boolean>} */
+/** All flags follow {@link https://en.wikipedia.org/wiki/Snake_case screaming snake case} */
 const DEBUG_FLAGS = {
     // Logs events that don't fit in any categories
     'GENERIC': true,
@@ -19,24 +20,21 @@ const italic = '\x1b[3m';
 const endEffect = '\x1b[0m';
 /**
  * Function used to log messages. Adds rich text effects to the terminal
- * @param {string} msg The message to log to the console
- * @param {string} module The name of the module that the log comes from
- * @param {string} flag The identifier used to differentiate between logs
  */
-export function log(msg, module, flag = 'GENERIC') {
+export function log(msg, filename, debugFlag = 'GENERIC') {
     // All flags should be upper case
-    flag = flag.toUpperCase();
+    debugFlag = debugFlag.toUpperCase();
 
-    if (flag === 'GENERIC') {
-        console.log(`${italic + module + endEffect}: ${msg}`);
+    if (debugFlag === 'GENERIC') {
+        console.log(`${italic + filename + endEffect}: ${msg}`);
 
     } else {
-        if (flag in DEBUG_FLAGS) {
-            if (DEBUG_FLAGS[flag] === true) {
-                console.log(`${italic + module + endEffect}: ${bold + flag + endEffect} ${msg}`);
+        if (debugFlag in DEBUG_FLAGS) {
+            if (DEBUG_FLAGS[debugFlag] === true) {
+                console.log(`${italic + filename + endEffect}: ${bold + debugFlag + endEffect} ${msg}`);
             }
         } else {
-            throw new Error(`${flag} is not a valid flag`);
+            throw new Error(`${debugFlag} is not a valid debugFlag`);
         }
     }
 }
