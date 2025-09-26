@@ -157,7 +157,7 @@ export class Printer {
     
     /**
      * Tells the printer to start the passed job
-     * If the printer is printing or paused, this will throw a `PrinterError`
+     * If the printer is printing, paused, not connected or connecting to a port, this will throw a `PrinterError`
      */
     startJob(job) {
         if (!(job instanceof Job))
@@ -172,6 +172,8 @@ export class Printer {
                 'printer.js', 
                 'PRINTER_JOB_STARTED'
             );
+        } else if (this.#state === PrinterState.NOT_CONNECTED || this.#state === PrinterState.CONNECTING) {
+            throw new PrinterError('A job cannot be started because this printer object is not connected to a serial port');
         } else {
             throw new PrinterError(`Printer at port "${this.#serialPort?.path}" is not done printing the current job. Therefore, it won't start another job`);
         }

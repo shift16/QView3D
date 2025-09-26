@@ -9,8 +9,11 @@ export class Job {
     name;
 
     constructor(jobName, gcodeScript) {
+        if (!(typeof jobName === 'string')) 
+            throw new TypeError(`A job's name is of type string, not type ${typeof jobName}`);
+        
         if (!(gcodeScript instanceof Array))
-            throw new TypeError(`GCode scripts are expected to be arrays`);
+            throw new TypeError(`GCode scripts are expected to be arrays of strings`);
 
         this.#gcodeScript = gcodeScript;
         this.#gcodeScriptIndex = 0;
