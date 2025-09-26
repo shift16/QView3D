@@ -133,7 +133,7 @@ export class Printer {
      * If the printer is printing or paused, this will throw a `PrinterError`
      */
     setSerialPort(serialPortLocation, baudRate = 115200) {
-        if (!(validBaudRates.includes(baudRate)))
+        if (!validBaudRates.includes(baudRate))
             throw new Error(`${baudRate} is not a valid or supported baud rate`);
             
         if (this.#serialPort instanceof SerialPort) {
@@ -165,7 +165,7 @@ export class Printer {
 
         if (this.#state === PrinterState.READY) {
             this.#currentJob = job;
-            
+            /** @todo Something needs to be a added here, but I forgot what */
 
             log(
                 `Job ${job.name} has started at printer "${this.#serialPort.path}"`, 
@@ -197,7 +197,6 @@ export class Printer {
         throw new Error('Function not implemented');
     }
 
-    /** @returns {number} */
     getCurrentState() {
         return this.#state;
     }
