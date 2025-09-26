@@ -12,6 +12,8 @@ const DEBUG_FLAGS = {
     'PRINTER_JOB_STARTED': true,
     // Logs when a job is completed
     'PRINTER_JOB_COMPLETED': true,
+    // Logs every response from the printer
+    'RESPONSE_FROM_PRINTER': true,
 };
 
 // Ansi Codes used to add rich text effects to your terminal
@@ -33,7 +35,7 @@ export function log(msg, filename, debugFlag = 'GENERIC') {
                 console.log(`${italic + filename + endEffect}: ${bold + debugFlag + endEffect} ${msg}`);
             }
         } else {
-            throw new Error(`${debugFlag} is not a valid debugFlag`);
+            throw new Error(`${debugFlag} is not a valid debug flag`);
         }
     }
 }

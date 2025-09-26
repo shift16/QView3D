@@ -59,14 +59,14 @@ export class Printer {
     #portListener(dataFromPort) {
         // Interpret the raw binary coming from the port as UTF-8 (or whatever MARLIN_PROTOCOL_ENCODING is) encoded strings
         if (dataFromPort instanceof Buffer)
-            dataFromPort.toString(MARLIN_PROTOCOL_ENCODING);
+            dataFromPort = dataFromPort.toString(MARLIN_PROTOCOL_ENCODING);
         
         // The response from the printer may not be complete so we must store the current response in a buffer
         // When we receive more data, we'll stitch the content together to create a complete response
         if (typeof dataFromPort === 'string')
             this.#dataBuffer += dataFromPort;
         else
-            throw new error(`stream at port "${this.#serialPort?.path}" is in object mode which is not supported`);
+            throw new Error(`Stream at port "${this.#serialPort?.path}" is in object mode which is not supported`);
 
         // Each complete response from the printer must be processed by the server
         // a complete response is UTF-8 (or whatever MARLIN_PROTOCOL_ENCODING is) encoded strings ending with a newline 
@@ -116,6 +116,12 @@ export class Printer {
             //## Handle temperature change
             /** @todo */
         }
+        
+        log(`${this.#serialPort?.path} ${this.#dataBuffer}`, 'printer.js', 'RESPONSE_FROM_PRINTER');
+        
+        // Because the last line is not a complete response, we'll store it in our buffer 
+        // and concatenate it with the next response from the printer
+        this.#dataBuffer = outputLines[outputLines.length - 1];
     }
     
     #closeListener(err) {
@@ -127,7 +133,7 @@ export class Printer {
      * If the printer is printing or paused, this will throw a `PrinterError`
      */
     setSerialPort(serialPortLocation, baudRate = 115200) {
-        if (!(baudRate in validBaudRates))
+        if (!(validBaudRates.includes(baudRate)))
             throw new Error(`${baudRate} is not a valid or supported baud rate`);
             
         if (this.#serialPort instanceof SerialPort) {
@@ -145,8 +151,8 @@ export class Printer {
         });
         
         this.#serialPort
-            .on('data', this.#portListener)
-            .on('close', this.#closeListener);
+            .on('data', this.#portListener.bind(this))
+            .on('close', this.#closeListener.bind(this));
     }
     
     /**
