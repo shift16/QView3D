@@ -20,6 +20,7 @@ export class Job {
         this.#gcodeScriptIndex = 0;
         this.name = name;
     }
+    
     /**
      * Returns the next G-code command from the G-code script
      * If this Job has no more G-code commands to send, then an error will be thrown
@@ -35,12 +36,8 @@ export class Job {
         return nextCommand;
     }
 
-    /** 
-     * Returns true if the current job is complete, false otherwise
-     * @returns {boolean}
-     */
-    notComplete() {
-        return this.#gcodeScript[this.#gcodeScriptIndex] !== undefined;
+    isComplete() {
+        return this.#gcodeScript[this.#gcodeScriptIndex] === undefined;
     }
 
     /**

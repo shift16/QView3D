@@ -86,7 +86,7 @@ export class Printer {
                     const cJob = this.#currentJob;
 
                     if (cJob instanceof Job) {
-                        if (cJob.notComplete()) {
+                        if (!cJob.isComplete()) {
                             // More G-code to send
                             const nextCommand = cJob.nextGCodeCommand();
                             this.#sendGcodeCommand(nextCommand);
