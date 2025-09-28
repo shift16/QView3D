@@ -179,7 +179,7 @@ export class Printer {
                 'PRINTER_JOB_STARTED'
             );
         } else if (this.#state === PrinterState.NOT_CONNECTED || this.#state === PrinterState.CONNECTING) {
-            throw new PrinterError('A job cannot be started because this printer object is not connected to a serial port');
+            throw new PrinterError('A job cannot be started because the connection to the printer hasn\'t been established yet'); 
         } else {
             throw new PrinterError(`Printer at port "${this.#serialPort?.path}" is not done printing the current job. Therefore, it won't start another job`);
         }
