@@ -74,6 +74,8 @@ export class Printer {
         else
             throw new Error(`Stream at port "${this.#serialPort?.path}" is in object mode which is not supported`);
 
+        /** @todo Nothing below should run when the printer is paused */
+        
         // Each complete response from the printer must be processed by the server
         // a complete response is UTF-8 (or whatever MARLIN_PROTOCOL_ENCODING is) encoded strings ending with a newline 
         // sometimes the printer will send multiple complete responses at once so we split each response by the newline
