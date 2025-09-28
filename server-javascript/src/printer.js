@@ -89,8 +89,8 @@ export class Printer {
             
             //## When we receive an OK
             if (currentLine.startsWith('ok') && currentLine.length === 2) {
-                // Send the next G-Code command if the printer is PRINTING or READY
-                if (this.#state === PrinterState.READY || this.#state === PrinterState.PRINTING) {
+                // Send the next G-Code command if the printer is PRINTING
+                if (this.#state === PrinterState.PRINTING) {
                     const cJob = this.#currentJob;
 
                     if (cJob instanceof Job) {
