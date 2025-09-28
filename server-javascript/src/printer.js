@@ -218,6 +218,10 @@ export class Printer {
         throw new Error('Function not implemented');
     }
     
+    unpausePrint() {
+        throw new Error('Function not implemented');
+    }
+    
     onTempChange(callback) {
         throw new Error('Function not implemented');
     }
