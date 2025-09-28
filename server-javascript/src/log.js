@@ -12,8 +12,10 @@ const DEBUG_FLAGS = {
     'PRINTER_JOB_STARTED': true,
     // Logs when a job is completed
     'PRINTER_JOB_COMPLETED': true,
-    // Logs every response from the printer
+    // Logs every response from a printer
     'RESPONSE_FROM_PRINTER': true,
+    // Logs every command sent to a printer
+    'COMMAND_SENT_TO_PRINTER': true
 };
 
 // Ansi Codes used to add rich text effects to your terminal
