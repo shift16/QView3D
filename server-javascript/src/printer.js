@@ -80,6 +80,8 @@ export class Printer {
         const outputLines = this.#dataBuffer.split('\n');
         
         // But, the last line doesn't end with a newline so we won't process it (outputLines.length - 1)
+        const incompleteLine = outputLines[outputLines.length - 1];
+        
         for (let i = 0; i < outputLines.length - 1; i++) {
             const currentLine = outputLines[i];
             //## Handle progress update
@@ -105,15 +107,13 @@ export class Printer {
                             );
                             this.#state = PrinterState.READY;
 
-                            if (this.#dataBuffer.length !== 0) {
+                            if (incompleteLine.length !== 0) {
                                 log(
                                     `The 3D printer at port "${this.#serialPort?.path}" had the content "${this.#dataBuffer}" in its buffer`,
                                     'printer.js',
                                     'NON_EMPTY_OUTPUT_BUFFER_ON_JOB_COMPLETE'
                                 );
                             }
-                            // Clear the buffer so the next job doesn't have garbage added to it
-                            this.#dataBuffer = '';
                         }
                     }
                 }
@@ -131,7 +131,7 @@ export class Printer {
         
         // Because the last line is not a complete response, we'll store it in our buffer 
         // and concatenate it with the next response from the printer
-        this.#dataBuffer = outputLines[outputLines.length - 1];
+        this.#dataBuffer = incompleteLine;
     }
     
     #closeListener(err) {
