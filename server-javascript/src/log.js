@@ -22,13 +22,12 @@ const italic = '\x1b[3m';
 const endEffect = '\x1b[0m';
 
 /** Function used to log messages. Adds rich text effects to the terminal */
-export function log(msg, filename, debugFlag = 'GENERIC') {
+export function log(msg, filename = 'unknown', debugFlag = 'GENERIC') {
     // All flags should be upper case
     debugFlag = debugFlag.toUpperCase();
 
     if (debugFlag === 'GENERIC') {
         console.log(`${italic + filename + endEffect}: ${msg}`);
-
     } else {
         if (debugFlag in DEBUG_FLAGS) {
             if (DEBUG_FLAGS[debugFlag] === true) {
