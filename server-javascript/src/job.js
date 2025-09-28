@@ -12,6 +12,7 @@ export class Job {
         if (!(typeof jobName === 'string')) 
             throw new TypeError(`A job's name is of type string, not type ${typeof jobName}`);
         
+        /** @todo The type is subject to change */
         if (!(gcodeScript instanceof Array))
             throw new TypeError(`GCode scripts are expected to be arrays of strings`);
 
