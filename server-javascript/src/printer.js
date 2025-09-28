@@ -51,7 +51,11 @@ export class Printer {
             throw new PrinterError(`Failed to send a command to the 3D printer at port "${this.#serialPort.path}"`, { cause: err });
         }
         
-        log(`${this.#serialPort.path} ${gcodeCommand.replace('\n', '\\n')}`, 'printer.js', 'COMMAND_SENT_TO_PRINTER');
+        log(
+            `${this.#serialPort.path} ${gcodeCommand.replace('\n', '\\n')}`,
+            'printer.js',
+            'COMMAND_SENT_TO_PRINTER'
+        );
     }
     
     /** 
@@ -119,7 +123,11 @@ export class Printer {
             /** @todo */
         }
         
-        log(`${this.#serialPort?.path} ${this.#dataBuffer.replaceAll('\n', '\\n')}`, 'printer.js', 'RESPONSE_FROM_PRINTER');
+        log(
+            `${this.#serialPort?.path} ${this.#dataBuffer.replaceAll('\n', '\\n')}`,
+            'printer.js',
+            'RESPONSE_FROM_PRINTER'
+        );
         
         // Because the last line is not a complete response, we'll store it in our buffer 
         // and concatenate it with the next response from the printer
