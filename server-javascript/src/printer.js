@@ -131,8 +131,9 @@ export class Printer {
     /**
      * Sets the serial port to communicate with and baudRate to use. Baud rate defaults to 115200b/s
      * If the printer is printing or paused, this will throw a `PrinterError`
+     * When the connection to the printer is established, `connectedCallback` is called
      */
-    setSerialPort(serialPortLocation, baudRate = 115200) {
+    setSerialPort(serialPortLocation, baudRate = 115200, connectedCallback) {
         if (!validBaudRates.includes(baudRate))
             throw new Error(`${baudRate} is not a valid or supported baud rate`);
             
@@ -148,6 +149,11 @@ export class Printer {
         this.#serialPort = new SerialPort({ path: serialPortLocation, baudRate: baudRate}, _ => {
             /** I believe this function is called when the SerialPort class has connected to the serial port @todo Double check */
             this.#state = PrinterState.READY;
+            
+            if (typeof connectedCallback === 'function')
+                connectedCallback.call(this);
+            else if (typeof connectedCallback !== 'undefined')
+                throw new TypeError(`connectedCallback is meant to be a function or undefined, not ${typeof connectedCallback}`);
         });
         
         this.#serialPort
