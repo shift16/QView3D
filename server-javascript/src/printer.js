@@ -172,29 +172,52 @@ export class Printer {
     }
     
     /**
-     * Tells the printer to start the passed job
-     * If the printer is printing, paused, not connected or connecting to a port, this will throw a `PrinterError`
+     * Sets the job for the printer to start
+     * If the printer is printing or paused, this will throw a `PrinterError`
      */
-    startJob(job) {
+    setJob(job) {
         if (!(job instanceof Job))
-            throw new TypeError(`When starting a job, you need to use a job object and not a "${typeof job}"`);
-
+            throw new TypeError(`setJob expected a job object, not a "${typeof job}"`);
+        
+        if (this.#state === PrinterState.PAUSED || this.#state === PrinterState.PRINTING)
+            throw new PrinterError(`Printer at port ${this.#serialPort.path} is already printing a job. This job must be stopped before setting another job`);
+        
+        this.#currentJob = job;
+    }
+    
+    /**
+     * If the printer is printing, paused, not connected or connecting to a port, this will throw a `PrinterError`
+     * Also, if no job has been set, then a `PrinterError` will be thrown
+     */
+    startPrint() {
         if (this.#state === PrinterState.READY) {
-            this.#currentJob = job;
-            /** @todo Something needs to be a added here, but I forgot what */
-
+            if (typeof this.#currentJob === 'undefined')
+                throw new PrinterError(`Printer at port ${this.#serialPort.path} has no job set`);
+            
+            this.#sendGcodeCommand(this.#currentJob.nextGcodeCommand());
+            this.#state = PrinterState.PRINTING;
+            
             log(
-                `Job ${job.name} has started at printer "${this.#serialPort.path}"`, 
+                `Job ${this.#currentJob.name} has started at printer "${this.#serialPort.path}"`, 
                 'printer.js', 
                 'PRINTER_JOB_STARTED'
             );
         } else if (this.#state === PrinterState.NOT_CONNECTED || this.#state === PrinterState.CONNECTING) {
             throw new PrinterError('A job cannot be started because the connection to the printer hasn\'t been established yet'); 
-        } else {
-            throw new PrinterError(`Printer at port "${this.#serialPort?.path}" is not done printing the current job. Therefore, it won't start another job`);
+        } else if (this.#state === PrinterState.PRINTING || this.#state === PrinterState.PAUSED) {
+            /** @todo Should we throw an error for this? (Errors crash the program) */
+            throw new PrinterError(`Printer at port "${this.#serialPort.path}" has already started printing the job`);
         }
     }
-
+    
+    pausePrint() {
+        throw new Error('Function not implemented');
+    }
+    
+    stopPrint() {
+        throw new Error('Function not implemented');
+    }
+    
     onTempChange(callback) {
         throw new Error('Function not implemented');
     }
