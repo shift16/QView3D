@@ -21,6 +21,8 @@ export const PrinterState = {
     ERROR: 5
 };
 
+const validPrinterStates = Object.values(PrinterState);
+
 const validBaudRates = [115200, 250000, 230400, 57600, 38400, 19200, 9600];
 
 /**
@@ -36,11 +38,11 @@ export class Printer {
     #eventEmitter;
 
     constructor() {
-        this.#state = PrinterState.NOT_CONNECTED;
+        this.#eventEmitter = new EventEmitter();
+        this.#setState(PrinterState.NOT_CONNECTED);
         this.#dataBuffer = '';
         this.#serialPort = undefined;
         this.#currentJob = undefined;
-        this.#eventEmitter = new EventEmitter();
     }
     
     #sendGcodeCommand(gcodeCommand) {
@@ -107,7 +109,7 @@ export class Printer {
                                     'printer.js',
                                     'PRINTER_JOB_COMPLETED'
                                 );
-                                this.#state = PrinterState.READY;
+                                this.#setState(PrinterState.READY);
 
                                 if (incompleteLine.length !== 0) {
                                     log(
@@ -151,6 +153,21 @@ export class Printer {
         throw new Error('Function not implemented');
     }
     
+    #setState(newState) {
+        if (validPrinterStates.includes(newState)) {
+            this.#state = newState;
+            this.#eventEmitter.emit('stateChange', newState);
+            
+            log(
+                `The state of printer at port "${this?.#serialPort?.path ?? 'NOT_CONNECTED_TO_PORT'}" is now "${newState}"`,
+                'printer.js',
+                'PRINTER_STATE_CHANGE'
+            );
+        } else {
+            throw new Error(`${newState} is not a valid printer state. Use the PrinterState object declared above to see the valid printer states`);
+        }
+    }
+    
     /**
      * Sets the serial port to communicate with and baudRate to use. Baud rate defaults to 115200b/s
      * If the printer is printing or paused, this will throw a `PrinterError`
@@ -167,11 +184,11 @@ export class Printer {
             this.#serialPort.close();
         }
         
-        this.#state = PrinterState.CONNECTING;
+        this.#setState(PrinterState.CONNECTING);
 
         this.#serialPort = new SerialPort({ path: serialPortLocation, baudRate: baudRate}, _ => {
             /** I believe this function is called when the SerialPort class has connected to the serial port @todo Double check */
-            this.#state = PrinterState.READY;
+            this.#setState(PrinterState.READY);
             
             if (typeof connectedCallback === 'function')
                 connectedCallback.call(this);
@@ -207,14 +224,14 @@ export class Printer {
             if (typeof this.#currentJob === 'undefined')
                 throw new PrinterError(`Printer at port ${this.#serialPort.path} has no job set`);
             
-            this.#sendGcodeCommand(this.#currentJob.nextGcodeCommand());
-            this.#state = PrinterState.PRINTING;
-            
             log(
                 `Job ${this.#currentJob.name} has started at printer "${this.#serialPort.path}"`, 
                 'printer.js', 
                 'PRINTER_JOB_STARTED'
             );
+            
+            this.#setState(PrinterState.PRINTING);
+            this.#sendGcodeCommand(this.#currentJob.nextGcodeCommand());
         } else if (this.#state === PrinterState.NOT_CONNECTED || this.#state === PrinterState.CONNECTING) {
             throw new PrinterError('A job cannot be started because the connection to the printer hasn\'t been established yet'); 
         } else if (this.#state === PrinterState.PRINTING || this.#state === PrinterState.PAUSED) {
@@ -225,7 +242,7 @@ export class Printer {
     
     pausePrint() {
         if (this.#state === PrinterState.PRINTING) {
-            this.#state = PrinterState.PAUSED;
+            this.#setState(PrinterState.PAUSED);
         } else if (this.#state === PrinterState.PAUSED) {
             /** @todo Should we throw an error for this? */ 
             throw new PrinterError(`Printer at port "${this.#serialPort.path}" is already paused`);
@@ -247,6 +264,10 @@ export class Printer {
     }
 
     onProgressUpdate(callback) {
+        throw new Error('Function not implemented');
+    }
+    
+    onStateChange(callback) {
         throw new Error('Function not implemented');
     }
 

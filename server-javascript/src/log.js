@@ -17,7 +17,9 @@ const DEBUG_FLAGS = {
     // Logs every command sent to a printer
     'COMMAND_SENT_TO_PRINTER': true,
     // Logs when a response is sent to a paused printer
-    'UNPROCESSED_RESPONSE': true
+    'UNPROCESSED_RESPONSE': true,
+    // Logs when the state of the printer changes
+    'PRINTER_STATE_CHANGE': true
 };
 
 // Ansi Codes used to add rich text effects to your terminal
