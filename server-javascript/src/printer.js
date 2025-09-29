@@ -21,9 +21,9 @@ export const PrinterState = {
     ERROR: 5
 };
 
-const validPrinterStates = Object.values(PrinterState);
+const VALID_PRINTER_STATES = Object.values(PrinterState);
 
-const validBaudRates = [115200, 250000, 230400, 57600, 38400, 19200, 9600];
+const VALID_BAUD_RATES = [115200, 250000, 230400, 57600, 38400, 19200, 9600];
 
 /**
  * Class used to communicate with {@link https://github.com/MarlinFirmware/Marlin Marlin firmware} compatible 3D printers
@@ -154,7 +154,7 @@ export class Printer {
     }
     
     #setState(newState) {
-        if (validPrinterStates.includes(newState)) {
+        if (VALID_PRINTER_STATES.includes(newState)) {
             this.#state = newState;
             this.#eventEmitter.emit('stateChange', newState);
             
@@ -174,7 +174,7 @@ export class Printer {
      * When the connection to the printer is established, `connectedCallback` is called
      */
     setSerialPort(serialPortLocation, baudRate = 115200, connectedCallback) {
-        if (!validBaudRates.includes(baudRate))
+        if (!VALID_BAUD_RATES.includes(baudRate))
             throw new Error(`${baudRate} is not a valid or supported baud rate`);
             
         if (this.#serialPort instanceof SerialPort) {
