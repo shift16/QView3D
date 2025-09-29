@@ -159,7 +159,7 @@ export class Printer {
             this.#eventEmitter.emit('stateChange', newState);
             
             log(
-                `The state of printer at port "${this?.#serialPort?.path ?? 'NOT_CONNECTED_TO_PORT'}" is now "${newState}"`,
+                `The state of printer at port "${this.#serialPort?.path ?? 'NOT_CONNECTED_TO_PORT'}" is now "${newState}"`,
                 'printer.js',
                 'PRINTER_STATE_CHANGE'
             );
