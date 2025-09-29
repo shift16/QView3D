@@ -21,6 +21,10 @@ export const PrinterState = {
     ERROR: 5
 };
 
+const PrinterEvent = {
+    STATE_CHANGE: 'stateChange'
+};
+
 const VALID_PRINTER_STATES = Object.values(PrinterState);
 
 const VALID_BAUD_RATES = [115200, 250000, 230400, 57600, 38400, 19200, 9600];
@@ -156,7 +160,7 @@ export class Printer {
     #setState(newState) {
         if (VALID_PRINTER_STATES.includes(newState)) {
             this.#state = newState;
-            this.#eventEmitter.emit('stateChange', newState);
+            this.#eventEmitter.emit(PrinterEvent.STATE_CHANGE, newState);
             
             log(
                 `The state of printer at port "${this.#serialPort?.path ?? 'NOT_CONNECTED_TO_PORT'}" is now "${newState}"`,
@@ -240,6 +244,7 @@ export class Printer {
         }
     }
     
+    /** If the printer is not printing or already paused, then this will throw a `PrinterError` */
     pausePrint() {
         if (this.#state === PrinterState.PRINTING) {
             this.#setState(PrinterState.PAUSED);
@@ -267,8 +272,12 @@ export class Printer {
         throw new Error('Function not implemented');
     }
     
+    /** Calls `callback` with the new state that the printer has changed to */
     onStateChange(callback) {
-        throw new Error('Function not implemented');
+        if (typeof callback !== 'function')
+            throw new TypeError(`Callbacks are functions that are called when an event occurs. Not a "${typeof callback}"`);
+
+        this.#eventEmitter.on(PrinterEvent.STATE_CHANGE, callback);
     }
 
     getCurrentJobProgress() {
