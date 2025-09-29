@@ -74,66 +74,77 @@ export class Printer {
         else
             throw new Error(`Stream at port "${this.#serialPort?.path}" is in object mode which is not supported`);
 
-        /** @todo Nothing below should run when the printer is paused */
-        
-        // Each complete response from the printer must be processed by the server
-        // a complete response is UTF-8 (or whatever MARLIN_PROTOCOL_ENCODING is) encoded strings ending with a newline 
-        // sometimes the printer will send multiple complete responses at once so we split each response by the newline
-        const outputLines = this.#dataBuffer.split('\n');
-        
-        // But, the last line doesn't end with a newline so we won't process it (outputLines.length - 1)
-        const incompleteLine = outputLines[outputLines.length - 1];
-        
-        for (let i = 0; i < outputLines.length - 1; i++) {
-            const currentLine = outputLines[i];
-            //## Handle progress update
-            /** @todo */
+        // Ensure the printer isn't paused
+        if (this.#state !== PrinterState.PAUSED) {
+            // Each complete response from the printer must be processed by the server
+            // a complete response is UTF-8 (or whatever MARLIN_PROTOCOL_ENCODING is) encoded strings ending with a newline 
+            // sometimes the printer will send multiple complete responses at once so we split each response by the newline
+            const outputLines = this.#dataBuffer.split('\n');
             
-            //## When we receive an OK
-            if (currentLine.startsWith('ok') && currentLine.length === 2) {
-                // Send the next G-Code command if the printer is PRINTING
-                if (this.#state === PrinterState.PRINTING) {
-                    const cJob = this.#currentJob;
+            // But, the last line doesn't end with a newline so we won't process it (outputLines.length - 1)
+            const incompleteLine = outputLines[outputLines.length - 1];
+            
+            for (let i = 0; i < outputLines.length - 1; i++) {
+                const currentLine = outputLines[i];
+                //## Handle progress update
+                /** @todo */
+                
+                //## When we receive an OK
+                if (currentLine.startsWith('ok') && currentLine.length === 2) {
+                    // Send the next G-Code command if the printer is PRINTING
+                    if (this.#state === PrinterState.PRINTING) {
+                        const cJob = this.#currentJob;
 
-                    if (cJob instanceof Job) {
-                        if (!cJob.isComplete()) {
-                            // More G-code to send
-                            const nextCommand = cJob.nextGcodeCommand();
-                            this.#sendGcodeCommand(nextCommand);
-                        } else {
-                            // No more G-code to send
-                            log(
-                                `Printer at port "${this.#serialPort?.path}" finished printing`,
-                                'printer.js',
-                                'PRINTER_JOB_COMPLETED'
-                            );
-                            this.#state = PrinterState.READY;
-
-                            if (incompleteLine.length !== 0) {
+                        if (cJob instanceof Job) {
+                            if (!cJob.isComplete()) {
+                                // More G-code to send
+                                const nextCommand = cJob.nextGcodeCommand();
+                                this.#sendGcodeCommand(nextCommand);
+                            } else {
+                                // No more G-code to send
                                 log(
-                                    `The 3D printer at port "${this.#serialPort?.path}" had the content "${this.#dataBuffer}" in its buffer`,
+                                    `Printer at port "${this.#serialPort?.path}" finished printing`,
                                     'printer.js',
-                                    'NON_EMPTY_OUTPUT_BUFFER_ON_JOB_COMPLETE'
+                                    'PRINTER_JOB_COMPLETED'
                                 );
+                                this.#state = PrinterState.READY;
+
+                                if (incompleteLine.length !== 0) {
+                                    log(
+                                        `The 3D printer at port "${this.#serialPort?.path}" had the content "${this.#dataBuffer}" in its buffer`,
+                                        'printer.js',
+                                        'NON_EMPTY_OUTPUT_BUFFER_ON_JOB_COMPLETE'
+                                    );
+                                }
                             }
                         }
                     }
                 }
+        
+                //## Handle temperature change
+                /** @todo */
             }
-    
-            //## Handle temperature change
-            /** @todo */
+            
+            log(
+                `${this.#serialPort?.path} ${this.#dataBuffer.replaceAll('\n', '\\n')}`,
+                'printer.js',
+                'RESPONSE_FROM_PRINTER'
+            );
+            
+            // Because the last line is not a complete response, we'll store it in our buffer 
+            // and concatenate it with the next response from the printer
+            // All other lines were processed so they are discarded
+            this.#dataBuffer = incompleteLine;
+        } else {
+            // Because the printer is paused, none of the responses from the printer are being processed
+            // Therefore, the buffer won't be overwritten (this.#dataBuffer != incompleteLine)
+            log(
+                `${this.#serialPort.path} ${this.#dataBuffer.replaceAll('\n', '\\n')}`,
+                'printer.js',
+                'UNPROCESSED_RESPONSE'
+            );
         }
         
-        log(
-            `${this.#serialPort?.path} ${this.#dataBuffer.replaceAll('\n', '\\n')}`,
-            'printer.js',
-            'RESPONSE_FROM_PRINTER'
-        );
-        
-        // Because the last line is not a complete response, we'll store it in our buffer 
-        // and concatenate it with the next response from the printer
-        this.#dataBuffer = incompleteLine;
     }
     
     #closeListener(err) {
@@ -213,14 +224,21 @@ export class Printer {
     }
     
     pausePrint() {
-        throw new Error('Function not implemented');
+        if (this.#state === PrinterState.PRINTING) {
+            this.#state = PrinterState.PAUSED;
+        } else if (this.#state === PrinterState.PAUSED) {
+            /** @todo Should we throw an error for this? */ 
+            throw new PrinterError(`Printer at port "${this.#serialPort.path}" is already paused`);
+        } else {
+            throw new PrinterError(`Attempted to pause printer at port "${this.#serialPort.path}" when it's not printing`);
+        }
     }
     
     stopPrint() {
         throw new Error('Function not implemented');
     }
     
-    unpausePrint() {
+    continuePrint() {
         throw new Error('Function not implemented');
     }
     
