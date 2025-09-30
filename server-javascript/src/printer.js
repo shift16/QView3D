@@ -29,6 +29,8 @@ const VALID_PRINTER_STATES = Object.values(PrinterState);
 
 const VALID_BAUD_RATES = [115200, 250000, 230400, 57600, 38400, 19200, 9600];
 
+const SERIAL_PRINT_COMMAND = 'M118 E1 Hello, world!\n';
+
 /**
  * Class used to communicate with {@link https://github.com/MarlinFirmware/Marlin Marlin firmware} compatible 3D printers
  */
@@ -261,7 +263,19 @@ export class Printer {
     }
     
     continuePrint() {
-        throw new Error('Function not implemented');
+        if (this.#state === PrinterState.PAUSED) {
+            this.#setState(PrinterState.PRINTING);
+            // Send this command to the printer so that we get an immediate response 
+            // Note: portListener only processes responses when the printer sends them
+            // Therefore, to get portListener to process responses, the printer needs to
+            // send a response (hence the SERIAL_PRINT_COMMAND)
+            this.#sendGcodeCommand(SERIAL_PRINT_COMMAND);
+        } else if (this.#state === PrinterState.PRINTING) {
+            /** @todo Should we throw an error for this? */
+            throw new PrinterError(`Printer at port "${this.#serialPort.path}" is already printing so continuing it makes no sense`);
+        } else {
+            throw new PrinterError(`Printer at port "${this.#serialPort?.path}" is not paused. Therefore, it cannot be continued`);
+        }
     }
     
     onTempChange(callback) {
