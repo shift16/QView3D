@@ -306,10 +306,6 @@ export class Printer {
         this.#eventEmitter.on(PrinterEvent.STATE_CHANGE, callback);
     }
 
-    getCurrentJobProgress() {
-        throw new Error('Function not implemented');
-    }
-
     getCurrentJob() {
         throw new Error('Function not implemented');
     }
