@@ -92,6 +92,16 @@ export class Printer {
             // But, the last line doesn't end with a newline so we won't process it (outputLines.length - 1)
             const incompleteLine = outputLines[outputLines.length - 1];
             
+            /** 
+             * @todo !! When the printer is paused, it could receive multiple "ok's" which would cause
+             * this loop to send multiple G-code commands at once. Doing this may cause the printer
+             * to ignore some of the commands being sent to it. It may also be hard to detect because
+             * very little commands would be lost...
+             * One solution is to send only 1 command when we receive multiple "ok's"
+             * @todo This solution is in use. Ensure that it properly works!
+             */
+            let commandSent = false;
+            
             for (let i = 0; i < outputLines.length - 1; i++) {
                 const currentLine = outputLines[i];
                 //## Handle progress update
@@ -103,27 +113,29 @@ export class Printer {
                     if (this.#state === PrinterState.PRINTING) {
                         const cJob = this.#currentJob;
 
-                        if (cJob instanceof Job) {
-                            if (!cJob.isComplete()) {
-                                // More G-code to send
+                        if (!cJob.isComplete()) {
+                            // More G-code to send
+                            // Don't spam the printer if we already sent a command for a previous 'ok'
+                            if (commandSent === false) {
                                 const nextCommand = cJob.nextGcodeCommand();
                                 this.#sendGcodeCommand(nextCommand);
-                            } else {
-                                // No more G-code to send
-                                log(
-                                    `Printer at port "${this.#serialPort?.path}" finished printing`,
-                                    'printer.js',
-                                    'PRINTER_JOB_COMPLETED'
-                                );
-                                this.#setState(PrinterState.READY);
+                                commandSent = true;
+                            }
+                        } else {
+                            // No more G-code to send
+                            log(
+                                `Printer at port "${this.#serialPort?.path}" finished printing`,
+                                'printer.js',
+                                'PRINTER_JOB_COMPLETED'
+                            );
+                            this.#setState(PrinterState.READY);
 
-                                if (incompleteLine.length !== 0) {
-                                    log(
-                                        `The 3D printer at port "${this.#serialPort?.path}" had the content "${this.#dataBuffer}" in its buffer`,
-                                        'printer.js',
-                                        'NON_EMPTY_OUTPUT_BUFFER_ON_JOB_COMPLETE'
-                                    );
-                                }
+                            if (incompleteLine.length !== 0) {
+                                log(
+                                    `The 3D printer at port "${this.#serialPort?.path}" had the content "${this.#dataBuffer}" in its buffer`,
+                                    'printer.js',
+                                    'NON_EMPTY_OUTPUT_BUFFER_ON_JOB_COMPLETE'
+                                );
                             }
                         }
                     }
