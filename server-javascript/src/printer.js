@@ -167,8 +167,23 @@ export class Printer {
         
     }
     
+    /** Function used to cleanly disconnect from a printer */
     #closeListener(err) {
-        throw new Error('Function not implemented');
+        if (err instanceof DisconnectedError) {
+            /** @todo handle disconnect error */
+            log(
+                err.message,
+                'printer.js',
+                'PRINTER_DISCONNECT_ERROR'
+            );
+        }
+
+        // Clear properties and set state to NOT_CONNECTED
+        this.#serialPort = undefined;
+        this.#dataBuffer = '';
+        this.#setState(PrinterState.NOT_CONNECTED);
+
+        // The printer will automatically turn off its hotends based on its hotend idle timeout (https://marlinfw.org/docs/gcode/M086.html)
     }
     
     #setState(newState) {
@@ -206,6 +221,8 @@ export class Printer {
 
         this.#serialPort = new SerialPort({ path: serialPortLocation, baudRate: baudRate}, _ => {
             /** I believe this function is called when the SerialPort class has connected to the serial port @todo Double check */
+            /** @todo handle any errors that occur during opening the serial port */
+
             this.#setState(PrinterState.READY);
             
             if (typeof connectedCallback === 'function')
@@ -289,7 +306,11 @@ export class Printer {
             throw new PrinterError(`Printer at port "${this.#serialPort?.path}" is not paused. Therefore, it cannot be continued`);
         }
     }
-    
+
+    closeSerialPort() {
+        this.#serialPort.close();
+    }
+
     onTempChange(callback) {
         throw new Error('Function not implemented');
     }
