@@ -1,6 +1,5 @@
 'use strict';
 
-import * as fs from 'node:fs';
 import { SerialPort } from './serialport.js';
 import { Job } from './job.js';
 import { log } from './log.js';
