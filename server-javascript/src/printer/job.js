@@ -1,5 +1,3 @@
-'use strict';
-
 /**
  * Class used to hold G-code to be sent to a 3D printer
  */
