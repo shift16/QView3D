@@ -1,5 +1,3 @@
-'use strict';
-
 // Simple log function with some flags
 
 /** All flags follow {@link https://en.wikipedia.org/wiki/Snake_case screaming snake case} */
