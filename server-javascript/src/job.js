@@ -1,3 +1,5 @@
+import { GCodeScript } from "./gcode_script";
+
 /**
  * Class used to hold G-code to be sent to a 3D printer
  */
@@ -11,8 +13,8 @@ export class Job {
             throw new TypeError(`A job's name is of type string, not type ${typeof jobName}`);
         
         /** @todo The type is subject to change */
-        if (!(gcodeScript instanceof Array))
-            throw new TypeError(`GCode scripts are expected to be arrays of strings`);
+        if (!(gcodeScript instanceof GCodeScript))
+            throw new TypeError(`GCode scripts are expected to be instances of 'GCodeScript'`);
 
         this.#gcodeScript = gcodeScript;
         this.#gcodeScriptIndex = 0;

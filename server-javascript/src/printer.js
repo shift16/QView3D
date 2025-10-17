@@ -1,6 +1,6 @@
 import { SerialPort } from './serialport.js';
 import { Job } from './job.js';
-import { log } from '../util/log.js';
+import { log } from './util/log.js';
 import { EventEmitter } from 'node:events';
 
 // Character encoding used in Marlin compatible 3D printers
