@@ -9,7 +9,7 @@ const getPrinterModelRegexPrusa = /; printer_model = (.+)/;
 /** Supports reading metadata in G-Code scripts and removes comments and empty lines in them */
 export class GCodeScript {
     #supportedHardware = [];
-    #gcodeScriptIndex;
+    #gcodeScriptIndex = 0;
     #gcodeScriptArr;
     #id;
 
@@ -60,7 +60,7 @@ export class GCodeScript {
         const nextCommand = this.#gcodeScriptArr[this.#gcodeScriptIndex];
 
         if (nextCommand === undefined)
-            throw new Error(`The job "${this.name}" has no more G-code commands to send`);
+            throw new Error(`The G-Code script "${this.#id}" has no more commands to send`);
 
         this.#gcodeScriptIndex++;
 

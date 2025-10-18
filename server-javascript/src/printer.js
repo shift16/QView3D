@@ -1,6 +1,7 @@
 import { SerialPort } from './serialport.js';
 import { log } from './util/log.js';
 import { EventEmitter } from 'node:events';
+import { GCodeScript } from './gcode_script.js';
 
 // Character encoding used in Marlin compatible 3D printers
 const MARLIN_PROTOCOL_ENCODING = 'utf-8';
@@ -109,7 +110,7 @@ export class Printer {
                     if (this.#state === PrinterState.PRINTING) {
                         const gScript = this.#currentScript;
 
-                        if (!gScript.isComplete()) {
+                        if (!gScript.reachedEndOfScript()) {
                             // More G-code to send
                             // Don't spam the printer if we already sent a command for a previous 'ok'
                             if (commandSent === false) {
@@ -202,7 +203,7 @@ export class Printer {
      * If the printer is printing or paused, this will throw a `PrinterError`
      * When the connection to the printer is established, `connectedCallback` is called
      */
-    setSerialPort(serialPortLocation, baudRate = 115200, connectedCallback) {
+    setSerialPort(serialPortLocation, connectedCallback, baudRate = 115200) {
         if (!VALID_BAUD_RATES.includes(baudRate))
             throw new Error(`${baudRate} is not a valid or supported baud rate`);
             
