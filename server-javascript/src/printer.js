@@ -1,5 +1,4 @@
 import { SerialPort } from './serialport.js';
-import { Job } from './job.js';
 import { log } from './util/log.js';
 import { EventEmitter } from 'node:events';
 
@@ -35,7 +34,7 @@ export class Printer {
     #state;
     // Used to hold incomplete responses from the printer
     #dataBuffer;
-    #currentJob;
+    #currentScript;
     #serialPort;
     // Used to call any callback functions that are listening for events from this printer
     #eventEmitter;
@@ -45,7 +44,7 @@ export class Printer {
         this.#setState(PrinterState.NOT_CONNECTED);
         this.#dataBuffer = '';
         this.#serialPort = undefined;
-        this.#currentJob = undefined;
+        this.#currentScript = undefined;
     }
     
     #sendGcodeCommand(gcodeCommand) {
@@ -108,13 +107,13 @@ export class Printer {
                 if (currentLine.startsWith('ok') && currentLine.length === 2) {
                     // Send the next G-Code command if the printer is PRINTING
                     if (this.#state === PrinterState.PRINTING) {
-                        const cJob = this.#currentJob;
+                        const gScript = this.#currentScript;
 
-                        if (!cJob.isComplete()) {
+                        if (!gScript.isComplete()) {
                             // More G-code to send
                             // Don't spam the printer if we already sent a command for a previous 'ok'
                             if (commandSent === false) {
-                                const nextCommand = cJob.nextGcodeCommand();
+                                const nextCommand = gScript.nextGcodeCommand();
                                 this.#sendGcodeCommand(nextCommand);
                                 commandSent = true;
                             }
@@ -234,41 +233,41 @@ export class Printer {
     }
     
     /**
-     * Sets the job for the printer to start
+     * Sets the G-Code script for the printer to start printing
      * If the printer is printing or paused, this will throw a `PrinterError`
      */
-    setJob(job) {
-        if (!(job instanceof Job))
-            throw new TypeError(`setJob expected a job object, not a "${typeof job}"`);
+    setGcodeScript(gcodeScript) {
+        if (!(gcodeScript instanceof GCodeScript))
+            throw new TypeError(`setGcodeScript expected a GCodeScript object, not a "${typeof gcodeScript}"`);
         
         if (this.#state === PrinterState.PAUSED || this.#state === PrinterState.PRINTING)
-            throw new PrinterError(`Printer at port ${this.#serialPort.path} is already printing a job. This job must be stopped before setting another job`);
+            throw new PrinterError(`Printer at port ${this.#serialPort.path} is already printing a script. This process must be stopped before setting another script`);
         
-        this.#currentJob = job;
+        this.#currentScript = gcodeScript;
     }
     
     /**
      * If the printer is printing, paused, not connected or connecting to a port, this will throw a `PrinterError`
-     * Also, if no job has been set, then a `PrinterError` will be thrown
+     * Also, if no script has been set, then a `PrinterError` will be thrown
      */
     startPrint() {
         if (this.#state === PrinterState.READY) {
-            if (typeof this.#currentJob === 'undefined')
-                throw new PrinterError(`Printer at port ${this.#serialPort.path} has no job set`);
+            if (typeof this.#currentScript === 'undefined')
+                throw new PrinterError(`Printer at port ${this.#serialPort.path} has no script set`);
             
             log(
-                `Job ${this.#currentJob.name} has started at printer "${this.#serialPort.path}"`, 
+                `Printer "${this.#serialPort.path}" has started G-Code script ${this.#currentScript.name} `, 
                 'printer.js', 
                 'PRINTER_JOB_STARTED'
             );
             
             this.#setState(PrinterState.PRINTING);
-            this.#sendGcodeCommand(this.#currentJob.nextGcodeCommand());
+            this.#sendGcodeCommand(this.#currentScript.nextGcodeCommand());
         } else if (this.#state === PrinterState.NOT_CONNECTED || this.#state === PrinterState.CONNECTING) {
-            throw new PrinterError('A job cannot be started because the connection to the printer hasn\'t been established yet'); 
+            throw new PrinterError('A G-Code script cannot be printed because the connection to the printer hasn\'t been established yet'); 
         } else if (this.#state === PrinterState.PRINTING || this.#state === PrinterState.PAUSED) {
             /** @todo Should we throw an error for this? (Errors crash the program) */
-            throw new PrinterError(`Printer at port "${this.#serialPort.path}" has already started printing the job`);
+            throw new PrinterError(`Printer at port "${this.#serialPort.path}" has already started printing the script`);
         }
     }
     
@@ -324,7 +323,7 @@ export class Printer {
         this.#eventEmitter.on(PrinterEvent.STATE_CHANGE, callback);
     }
 
-    getCurrentJob() {
+    getCurrentScript() {
         throw new Error('Function not implemented');
     }
 
