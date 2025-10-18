@@ -27,8 +27,5 @@
     "express": "5.1.0",
     "@serialport/stream": "13.0.0",
     "@serialport/bindings-cpp": "13.0.0"
-  },
-  "devDependencies": {
-    "@types/node": "18.19.1"
   }
 }
