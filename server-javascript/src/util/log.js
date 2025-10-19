@@ -19,7 +19,11 @@ const DEBUG_FLAGS = {
     // Logs when the state of the printer changes
     'PRINTER_STATE_CHANGE': true,
     // Logs when a disconnect error occurs when the connection to a printer ends
-    'PRINTER_DISCONNECT_ERROR': true
+    'PRINTER_DISCONNECT_ERROR': true,
+    // Logs when the printer model name is not received
+    'PRINTER_MODEL_FAIL': true,
+    // Logs when the printer model name is received
+    'PRINTER_MODEL_SUCCESS': true
 };
 
 // Ansi Codes used to add rich text effects to your terminal

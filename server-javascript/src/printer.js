@@ -6,6 +6,9 @@ import { GCodeScript } from './gcode_script.js';
 // Character encoding used in Marlin compatible 3D printers
 const MARLIN_PROTOCOL_ENCODING = 'utf-8';
 
+// Used to get the model name from the 3D printer
+const getPrinterModelName = /MACHINE_TYPE:([^\s]*)/;
+
 // Used to differentiate between ambiguous errors and errors thrown by printer operations
 export class PrinterError extends Error {};
 
@@ -39,13 +42,12 @@ export class Printer {
     #serialPort;
     // Used to call any callback functions that are listening for events from this printer
     #eventEmitter;
+    #printerModel;
 
     constructor() {
         this.#eventEmitter = new EventEmitter();
         this.#setState(PrinterState.NOT_CONNECTED);
         this.#dataBuffer = '';
-        this.#serialPort = undefined;
-        this.#currentScript = undefined;
     }
     
     #sendGcodeCommand(gcodeCommand) {
@@ -71,7 +73,7 @@ export class Printer {
         // Interpret the raw binary coming from the port as UTF-8 (or whatever MARLIN_PROTOCOL_ENCODING is) encoded strings
         if (dataFromPort instanceof Buffer)
             dataFromPort = dataFromPort.toString(MARLIN_PROTOCOL_ENCODING);
-        
+ 
         // The response from the printer may not be complete so we must store the current response in a buffer
         // When we receive more data, we'll stitch the content together to create a complete response
         if (typeof dataFromPort === 'string')
@@ -79,16 +81,37 @@ export class Printer {
         else
             throw new Error(`Stream at port "${this.#serialPort?.path}" is in object mode which is not supported`);
 
+        // If we don't know the printer model, then let's get it
+        if (this.#printerModel === undefined) {
+            const modelName = getPrinterModelName.exec(this.#dataBuffer)?.[1];
+
+            if (modelName !== undefined) {
+                this.#printerModel = modelName;
+
+                log(
+                    `The printer model at port ${this.#serialPort.path} is ${this.#printerModel}`,
+                    'printer.js',
+                    'PRINTER_MODEL_SUCCESS'
+                );
+            } else {
+                log(
+                    `Failed to get printer model name at port ${this.#serialPort?.path}`,
+                    'printer.js',
+                    'PRINTER_MODEL_FAIL'
+                )
+            }
+        }
+
         // Ensure the printer isn't paused
         if (this.#state !== PrinterState.PAUSED) {
             // Each complete response from the printer must be processed by the server
             // a complete response is UTF-8 (or whatever MARLIN_PROTOCOL_ENCODING is) encoded strings ending with a newline 
             // sometimes the printer will send multiple complete responses at once so we split each response by the newline
             const outputLines = this.#dataBuffer.split('\n');
-            
+ 
             // But, the last line doesn't end with a newline so we won't process it (outputLines.length - 1)
             const incompleteLine = outputLines[outputLines.length - 1];
-            
+ 
             /** 
              * @todo !! When the printer is paused, it could receive multiple "ok's" which would cause
              * this loop to send multiple G-code commands at once. Doing this may cause the printer
@@ -98,12 +121,12 @@ export class Printer {
              * @todo This solution is in use. Ensure that it properly works!
              */
             let commandSent = false;
-            
+ 
             for (let i = 0; i < outputLines.length - 1; i++) {
                 const currentLine = outputLines[i];
                 //## Handle progress update
                 /** @todo */
-                
+ 
                 //## When we receive an OK
                 if (currentLine.startsWith('ok') && currentLine.length === 2) {
                     // Send the next G-Code command if the printer is PRINTING
@@ -137,17 +160,17 @@ export class Printer {
                         }
                     }
                 }
-        
+ 
                 //## Handle temperature change
                 /** @todo */
             }
-            
+ 
             log(
                 `${this.#serialPort?.path} ${this.#dataBuffer.replaceAll('\n', '\\n')}`,
                 'printer.js',
                 'RESPONSE_FROM_PRINTER'
             );
-            
+ 
             // Because the last line is not a complete response, we'll store it in our buffer 
             // and concatenate it with the next response from the printer
             // All other lines were processed so they are discarded
@@ -161,9 +184,9 @@ export class Printer {
                 'UNPROCESSED_RESPONSE'
             );
         }
-        
+ 
     }
-    
+
     /** Function used to cleanly disconnect from a printer */
     #closeListener(err) {
         if (err instanceof DisconnectedError) {
@@ -182,12 +205,12 @@ export class Printer {
 
         // The printer will automatically turn off its hotends based on its hotend idle timeout (https://marlinfw.org/docs/gcode/M086.html)
     }
-    
+ 
     #setState(newState) {
         if (VALID_PRINTER_STATES.includes(newState)) {
             this.#state = newState;
             this.#eventEmitter.emit(PrinterEvent.STATE_CHANGE, newState);
-            
+ 
             log(
                 `The state of printer at port "${this.#serialPort?.path ?? 'NOT_CONNECTED_TO_PORT'}" is now "${newState}"`,
                 'printer.js',
@@ -197,7 +220,7 @@ export class Printer {
             throw new Error(`${newState} is not a valid printer state. Use the PrinterState object declared above to see the valid printer states`);
         }
     }
-    
+ 
     /**
      * Sets the serial port to communicate with and baudRate to use. Baud rate defaults to 115200b/s
      * If the printer is printing or paused, this will throw a `PrinterError`
@@ -206,14 +229,14 @@ export class Printer {
     setSerialPort(serialPortLocation, connectedCallback, baudRate = 115200) {
         if (!VALID_BAUD_RATES.includes(baudRate))
             throw new Error(`${baudRate} is not a valid or supported baud rate`);
-            
+ 
         if (this.#serialPort instanceof SerialPort) {
             if (this.#state === PrinterState.PRINTING || this.#state === PrinterState.PAUSED)
                 throw new PrinterError(`Cannot set serial port because the printer at port "${this.#serialPort.path}" is currently printing`);
 
             this.#serialPort.close();
         }
-        
+ 
         this.#setState(PrinterState.CONNECTING);
 
         this.#serialPort = new SerialPort({ path: serialPortLocation, baudRate: baudRate}, _ => {
@@ -221,18 +244,18 @@ export class Printer {
             /** @todo handle any errors that occur during opening the serial port */
 
             this.#setState(PrinterState.READY);
-            
+
             if (typeof connectedCallback === 'function')
                 connectedCallback.call(this);
             else if (typeof connectedCallback !== 'undefined')
                 throw new TypeError(`connectedCallback is meant to be a function or undefined, not ${typeof connectedCallback}`);
         });
-        
+ 
         this.#serialPort
             .on('data', this.#portListener.bind(this))
             .on('close', this.#closeListener.bind(this));
     }
-    
+ 
     /**
      * Sets the G-Code script for the printer to start printing
      * If the printer is printing or paused, this will throw a `PrinterError`
@@ -243,10 +266,10 @@ export class Printer {
         
         if (this.#state === PrinterState.PAUSED || this.#state === PrinterState.PRINTING)
             throw new PrinterError(`Printer at port ${this.#serialPort.path} is already printing a script. This process must be stopped before setting another script`);
-        
+
         this.#currentScript = gcodeScript;
     }
-    
+ 
     /**
      * If the printer is printing, paused, not connected or connecting to a port, this will throw a `PrinterError`
      * Also, if no script has been set, then a `PrinterError` will be thrown
@@ -255,13 +278,13 @@ export class Printer {
         if (this.#state === PrinterState.READY) {
             if (typeof this.#currentScript === 'undefined')
                 throw new PrinterError(`Printer at port ${this.#serialPort.path} has no script set`);
-            
+ 
             log(
                 `Printer "${this.#serialPort.path}" has started G-Code script ${this.#currentScript.name} `, 
                 'printer.js', 
                 'PRINTER_JOB_STARTED'
             );
-            
+ 
             this.#setState(PrinterState.PRINTING);
             this.#sendGcodeCommand(this.#currentScript.nextGcodeCommand());
         } else if (this.#state === PrinterState.NOT_CONNECTED || this.#state === PrinterState.CONNECTING) {
@@ -271,7 +294,7 @@ export class Printer {
             throw new PrinterError(`Printer at port "${this.#serialPort.path}" has already started printing the script`);
         }
     }
-    
+ 
     /** If the printer is not printing or already paused, then this will throw a `PrinterError` */
     pausePrint() {
         if (this.#state === PrinterState.PRINTING) {
@@ -283,11 +306,11 @@ export class Printer {
             throw new PrinterError(`Attempted to pause printer at port "${this.#serialPort.path}" when it's not printing`);
         }
     }
-    
+ 
     stopPrint() {
         throw new Error('Function not implemented');
     }
-    
+ 
     continuePrint() {
         if (this.#state === PrinterState.PAUSED) {
             this.#setState(PrinterState.PRINTING);
@@ -315,7 +338,7 @@ export class Printer {
     onProgressUpdate(callback) {
         throw new Error('Function not implemented');
     }
-    
+ 
     /** Calls `callback` with the new state that the printer has changed to */
     onStateChange(callback) {
         if (typeof callback !== 'function')
