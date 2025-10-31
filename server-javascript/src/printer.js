@@ -7,7 +7,7 @@ import { GCodeScript } from './gcode_script.js';
 const MARLIN_PROTOCOL_ENCODING = 'utf-8';
 
 // Used to get the model name from the 3D printer
-const getPrinterModelName = /MACHINE_TYPE:([^\s]*)/;
+const GET_PRINTER_MODEL_NAME = /MACHINE_TYPE:([^\s]*)/;
 
 // Used to differentiate between ambiguous errors and errors thrown by printer operations
 export class PrinterError extends Error {};
@@ -31,10 +31,32 @@ const VALID_BAUD_RATES = [115200, 250000, 230400, 57600, 38400, 19200, 9600];
 
 const SERIAL_PRINT_COMMAND = 'M118 E1 Hello, world!\n';
 
+const allPrinters = [];
+
+export function getCompatiblePrinters(gcodeScript) {
+    if (!(gcodeScript instanceof GCodeScript))
+        throw new Error(`gcodeScript should be an instance of the GCodeScript class. Not a ${typeof gcodeScript}`);
+
+    const compatiblePrinters = [];
+
+    for (let i = 0; i < allPrinters.length; i++) {
+        const printer = connectedPrinters[i];
+        const printerModel = printer.getModelName();
+
+        if (printerModel !== undefined) {
+            if (gcodeScript.supportsPrinter(printerModel))
+                compatiblePrinters.push(printer);
+        }
+    }
+
+    return compatiblePrinters;
+}
+
 /**
  * Class used to communicate with {@link https://github.com/MarlinFirmware/Marlin Marlin firmware} compatible 3D printers
  */
 export class Printer {
+    static #allPrinters = [];
     #state;
     // Used to hold incomplete responses from the printer
     #dataBuffer;
@@ -48,6 +70,7 @@ export class Printer {
         this.#eventEmitter = new EventEmitter();
         this.#setState(PrinterState.NOT_CONNECTED);
         this.#dataBuffer = '';
+        allPrinters.push(this);
     }
     
     #sendGcodeCommand(gcodeCommand) {
@@ -83,7 +106,7 @@ export class Printer {
 
         // If we don't know the printer model, then let's get it
         if (this.#printerModel === undefined) {
-            const modelName = getPrinterModelName.exec(this.#dataBuffer)?.[1];
+            const modelName = GET_PRINTER_MODEL_NAME.exec(this.#dataBuffer)?.[1];
 
             if (modelName !== undefined) {
                 this.#printerModel = modelName;
@@ -348,11 +371,12 @@ export class Printer {
     }
 
     getCurrentScript() {
-        throw new Error('Function not implemented');
+        return this.#currentScript;
     }
 
+    /** If the model name hasn't been figured out, this will return 'undefined' */
     getModelName() {
-        throw new Error('Function not implemented');
+        return this.#printerModel;
     }
 
     getCurrentState() {

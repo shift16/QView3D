@@ -1,13 +1,15 @@
 import express from 'express';
 
+import deviceController from './controllers/device.js';
+import printerController from './controllers/printer.js';
+
 const app = express();
 
 const PORT = 3000;
 
-app.get('/', (req, res) => {
-  res.send('Hello World!');
-})
+app.use(printerController);
+app.use(deviceController);
 
-app.listen(PORT, () => {
-  console.log(`Example app listening on port ${PORT}`);
-})
+app.listen(PORT, _ => {
+    console.log(`Listening on port ${PORT}`);
+});
