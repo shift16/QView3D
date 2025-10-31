@@ -16,11 +16,13 @@ const USB_SERIAL = 'ttyUSB';
 export class CommError extends Error {};
 export class PrinterTimeout extends Error {};
 
+// Constants for serial communication
 const DEFAULT_BAUD_RATE = 115200;
 const DEFAULT_READ_BUFFER_SIZE = 1024; // 1KB
 const DEFAULT_BYTES_TO_READ = 1024; // 1KB
 const RESPONSE_COMPLETED = 'ok';
 const MARLIN_PROTOCOL_ENCODING = 'utf8';
+const SERIAL_BOOT_TIME = 5000;
 // Used to test if the device we're communicating with is a printer
 const HELLO_CMD = 'M118 E1 Hello, world!gh4rf';
 const HELLO_CMD_REGEX = /Hello, world!gh4rf/;
@@ -307,6 +309,7 @@ async function createSerialCommunicationLoop(printer) {
                 const nextOutput = await serialPortBinding.read(
                     Buffer.alloc(DEFAULT_READ_BUFFER_SIZE), 0, DEFAULT_BYTES_TO_READ);
                 outputBuffer += nextOutput.buffer.toString(MARLIN_PROTOCOL_ENCODING);
+                console.log(outputBuffer);
 
                 // Only process G-Code commands when the printer is PrinterState.PRINTING
                 if (printer.state === PrinterState.PRINTING) {
@@ -381,6 +384,9 @@ async function createSerialCommunicationLoop(printer) {
     }
 
     serialPortListener();
+    // Wait a little of time for the printer to be ready
+    await setTimeoutP(SERIAL_BOOT_TIME);
+
     printer.state = PrinterState.READY;
     
     // Test the serial port to see if it's a printer
@@ -396,6 +402,7 @@ async function createSerialCommunicationLoop(printer) {
         console.log(e);
     }
 
+    connectedSerialPrinters.set(printer.serialPort, printer);
     return printer;
 }
 
@@ -418,7 +425,6 @@ export async function getPrinterAtSerialPort(port, baudRate = DEFAULT_BAUD_RATE)
 
         // Create the communication loop
         await createSerialCommunicationLoop(newPrinter);
-        connectedSerialPrinters.set(port, newPrinter);
 
         return newPrinter;
     }

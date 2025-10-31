@@ -5,4 +5,4 @@ export function getConnectedDevices() {
     throw new NotImplemented();
 }
 
-await getPrinterAtSerialPort('/dev/ttyACM0');
+console.log(await getPrinterAtSerialPort('/dev/ttyACM0'));
