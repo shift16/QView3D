@@ -1,4 +1,4 @@
-import { autoDetect } from "@serialport/bindings-cpp";
+import { autoDetect } from '@serialport/bindings-cpp';
 import { readdir } from 'node:fs/promises';
 import { platform } from 'node:process';
 import { setTimeout as setTimeoutP } from 'node:timers/promises';
@@ -22,11 +22,11 @@ const DEFAULT_READ_BUFFER_SIZE = 1024; // 1KB
 const DEFAULT_BYTES_TO_READ = 1024; // 1KB
 const RESPONSE_COMPLETED = 'ok';
 const MARLIN_PROTOCOL_ENCODING = 'utf8';
-const SERIAL_BOOT_TIME = 5000;
+const SERIAL_BOOT_TIME = 10000;
 // Used to test if the device we're communicating with is a printer
-const HELLO_CMD = 'M118 E1 Hello, world!gh4rf';
+const HELLO_CMD = 'M118 E1 Hello, world!gh4rf\n';
 const HELLO_CMD_REGEX = /Hello, world!gh4rf/;
-const HELLO_CMD_TIMEOUT = 5000;
+const HELLO_CMD_TIMEOUT = 2000;
 
 const PRINTER_FIRMWARE_INFO_CMD = 'M115';
 const MACHINE_INFO_REGEX = /MACHINE_TYPE:([^\s]*)/;
@@ -201,6 +201,7 @@ export function sendGCodeCommand(gcodeCommand, printer, timeoutAfter = -1, sendI
     }
 
     if (printer.state === PrinterState.PRINTING) {
+        log(`${gcodeCommand.replaceAll('\n', '')}`, 'serial.js', 'COMMAND_QUEUED_UP');
         return new Promise((resolve, reject) => {
             const newSentGCodeCommand = new SentGCodeCommand(gcodeCommand, resolve, reject);
             if (sendImmediately === false) {
@@ -214,7 +215,7 @@ export function sendGCodeCommand(gcodeCommand, printer, timeoutAfter = -1, sendI
                 setTimeout(() => {
                     if (newSentGCodeCommand.state === SentGCodeCommandState.SENT) {
                         newSentGCodeCommand.state = SentGCodeCommandState.TIMED_OUT;
-                        reject(new PrinterTimeout(`G-Code command "${gcodeCommand}" timed out after ${timeoutAfter}ms`));
+                        reject(new PrinterTimeout(`G-Code command "${gcodeCommand.replaceAll('\n', '')}" timed out after ${timeoutAfter}ms`));
                     }
                 }, timeoutAfter);
             }
@@ -229,12 +230,12 @@ export function sendGCodeCommand(gcodeCommand, printer, timeoutAfter = -1, sendI
  * WARNING: This skips the sendQueue so it must only be used when
  * the communication loop has ended
  */
-function sendHello(printer) {
+async function sendHello(printer) {
     if (!(printer instanceof Printer))
         throw new TypeError(`Expected Printer object, got ${typeof printer}`);
 
     if (printer.connectionType === ConnectionType.SerialPort) {
-        printer.serialPortBinding.write(Buffer.from(HELLO_CMD, MARLIN_PROTOCOL_ENCODING));
+        await printer.serialPortBinding.write(Buffer.from(HELLO_CMD, MARLIN_PROTOCOL_ENCODING));
     }
 }
 
@@ -306,10 +307,16 @@ async function createSerialCommunicationLoop(printer) {
         let previousCommand = null;
         while (serialPortBinding.isOpen === true) {
             try {
-                const nextOutput = await serialPortBinding.read(
-                    Buffer.alloc(DEFAULT_READ_BUFFER_SIZE), 0, DEFAULT_BYTES_TO_READ);
-                outputBuffer += nextOutput.buffer.toString(MARLIN_PROTOCOL_ENCODING);
-                console.log(outputBuffer);
+                /** @todo This is inefficient. A buffer is being created and 90%+ of it isn't being used. This can be optimized in the future... */
+                const nextOutput = await serialPortBinding.read(Buffer.alloc(DEFAULT_READ_BUFFER_SIZE), 0, DEFAULT_BYTES_TO_READ);
+                let bytesRead = nextOutput
+                let buf = nextOutput.buffer.toString(MARLIN_PROTOCOL_ENCODING);
+
+                // During the convertion from
+
+                outputBuffer += buf;
+                
+                log(`${buf.replaceAll('\n', '')}`, 'serial.js', 'RESPONSE_FROM_PRINTER');
 
                 // Only process G-Code commands when the printer is PrinterState.PRINTING
                 if (printer.state === PrinterState.PRINTING) {
@@ -366,6 +373,7 @@ async function createSerialCommunicationLoop(printer) {
                             if (nextGCodeCommand.state === SentGCodeCommandState.TIMED_OUT)
                                 continue;
 
+                            log(`${nextGCodeCommand.command.replaceAll('\n', '')}`, 'serial.js', 'COMMAND_SENT_TO_PRINTER');
                             await printer.serialPortBinding.write(Buffer.from(nextGCodeCommand.command, MARLIN_PROTOCOL_ENCODING));
                             previousCommand = nextGCodeCommand;
                             
@@ -393,7 +401,7 @@ async function createSerialCommunicationLoop(printer) {
     /** @todo Ensure this actually works */
     try {
         // Start the communication loop
-        sendHello(printer);
+        await sendHello(printer);
         // Verify that this is a printer
         const printerOutput = await sendGCodeCommand(HELLO_CMD, printer, HELLO_CMD_TIMEOUT, true);
 

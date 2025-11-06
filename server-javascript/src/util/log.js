@@ -23,7 +23,9 @@ const DEBUG_FLAGS = {
     // Logs when the printer model name is not received
     'PRINTER_MODEL_FAIL': true,
     // Logs when the printer model name is received
-    'PRINTER_MODEL_SUCCESS': true
+    'PRINTER_MODEL_SUCCESS': true,
+    // Logs when a G-Code command is queued up 
+    'COMMAND_QUEUED_UP': true
 };
 
 // Ansi Codes used to add rich text effects to your terminal

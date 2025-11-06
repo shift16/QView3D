@@ -1,0 +1,45 @@
+There needs to be simple interface for communicating with printers
+
+printer.js
+    |> device.js
+        |> serial.js
+        |> ip_printer.js
+
+
+A known device is a device that responds to G-Code
+
+Known devices have all of their properties (model name, capabilities, etc) set
+
+Unknown devices do not have these properties (obviously)
+
+Communicating to a printer:
+    addScriptToQueue(GCodeScript | string, Printer) -> void
+    onOutputMatch(Regex, Printer) -> Promise<string>
+    listPrinters() -> Array<Printer>
+    refreshPrinterList() -> Promise<void>
+    # All below might not be necessary
+    startPrint(Printer) -> void
+    stopPrint(Printer) -> void
+    continuePrint(Printer) -> void
+    pausePrint(Printer) -> void
+
+sendGCodeScript(gscript, printer);
+await onOutputMatch(/regex/, printer);
+
+Send a G-Code command and then attach a promises' resolve and reject 
+
+This way operations can be done synchronously
+    Done
+
+Open port - \/
+    Wait for open event to occur, then send some
+    test commands to see if the printer is responsive
+
+Continue, Start, Pause, Stop
+
+async func
+    anonymous async func
+        while loop
+    after async function creation terminate
+
+
